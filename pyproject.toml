@@ -1,0 +1,22 @@
+[project]
+name = "protein-candidate-agent"
+version = "0.1.0"
+description = "Smolagents protein candidate design agent with Plan-Execute-Verify loop"
+requires-python = ">=3.10"
+dependencies = [
+    "smolagents>=1.0.0",
+    "litellm",
+    "biopython",
+    "requests",
+    "pandas",
+]
+
+[project.optional-dependencies]
+structural = [
+    "colabfold[alphafold]",
+    "protenix",
+]
+
+[project.scripts]
+protein-agent = "main:main"
+
