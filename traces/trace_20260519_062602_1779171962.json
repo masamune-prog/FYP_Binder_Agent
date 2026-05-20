@@ -1,0 +1,9 @@
+{
+  "design_process": "Random peptide was designed to be a novel binder to the SARS-CoV-2 Spike glycoprotein.",
+  "saved_at": "2026-05-19T06:26:02.890787+00:00",
+  "verification": {
+    "identity_threshold": 80.0,
+    "iedb_max_identity": 0.0,
+    "sabdab_max_identity": 0.0
+  }
+}

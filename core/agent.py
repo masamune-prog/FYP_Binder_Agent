@@ -20,8 +20,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from smolagents import CodeAgent
-
+from smolagents import CodeAgent, MCPClient
+from mcp import StdioServerParameters
 from core.smolagent_tools import (
     run_remote_blastp_search,
     save_reasoning_trace,
@@ -117,6 +117,7 @@ STEP 1 — Gather context from live databases AND the web:
   select_fields="structure_id,linear_sequence,parent_source_antigen_names",
   limit=20).
   These query the real SAbDab and IEDB REST APIs for the latest data.
+  Use the BioMCP server to gather more information about the target protein, such as predicted structures, domain annotations, or known interactions.
   Additionally, call web_search(f"{{target_name}} antibody binding epitope") to
   retrieve recent literature and supplementary context not covered by the
   structured databases. If a search result URL looks useful, call
@@ -124,15 +125,12 @@ STEP 1 — Gather context from live databases AND the web:
   Print the results so you can reason about known binders and epitopes.
   Pay attention to binding interfaces, key contact residues, and epitope
   structures — you will use this to inform your binder design.
-
+  USe the MCP tools to help you reason about the data and design better candidates.
 STEP 2 — Design a candidate binder:
   Based on what you learned about the target's structure, epitopes, and known
   interactions, design a NOVEL peptide or mini-protein BINDER (40-120 residues)
   that could interact with the target protein.
   - Design the sequence FROM SCRATCH. Do NOT copy or mutate the target.
-  - Consider complementary surface properties for binding.
-  - Use helical or loop scaffolds suited for protein-protein interaction.
-  - Avoid verbatim motifs found in existing known binders.
   - Use standard amino acid codes.
   - For every design decision, reason about your design choice and justify it.
   Store as a FASTA string variable with header ">candidate_{{target_name}}".
@@ -221,7 +219,7 @@ def _create_model(model_id: str):
 # Agent creation
 # ---------------------------------------------------------------------------
 
-def create_agent(config: AgentConfig) -> CodeAgent:
+def create_agent(config: AgentConfig, mcp_tools: list | None = None) -> CodeAgent:
     """Instantiate a CodeAgent with the protein design tools and prompt."""
     model = _create_model(config.model_id)
 
@@ -231,17 +229,21 @@ def create_agent(config: AgentConfig) -> CodeAgent:
         identity_threshold_pct=identity_pct,
         target_name=config.target_name,
     )
+    
+    agent_tools = [
+        run_remote_blastp_search,
+        search_sabdab,
+        query_iedb,
+        web_search,
+        visit_webpage,
+        save_reasoning_trace,
+    ]
+    if mcp_tools:
+        agent_tools.extend(mcp_tools)
 
     agent = CodeAgent(
         name="agent",
-        tools=[
-            run_remote_blastp_search,
-            search_sabdab,
-            query_iedb,
-            web_search,
-            visit_webpage,
-            save_reasoning_trace,
-        ],
+        tools=agent_tools,
         model=model,
         planning_interval=1,
         max_steps=20,  # Allow retries — each cycle is ~4 steps
@@ -274,30 +276,34 @@ def run_agent(config: AgentConfig) -> str:
     target_fasta = normalize_fasta(config.target_fasta)
     target_name = config.target_name or "unknown_target"
 
-    agent = create_agent(config)
+    server_parameters = StdioServerParameters(command="biomcp", args=["mcp"])
+    
+    with MCPClient(server_parameters) as mcp_tools:
+        agent = create_agent(config, mcp_tools)
 
-    task = (
-        f"Design a novel peptide or mini-protein BINDER for the following "
-        f"target protein. The candidate must be a completely new sequence "
-        f"designed to BIND TO the target — NOT a mutated copy of the target.\n\n"
-        f"Target name: {target_name}\n"
-        f"Identity threshold: {config.identity_threshold:.0%}\n\n"
-        f"Target FASTA:\n```\n{target_fasta}```\n\n"
-        f"Follow the Plan-Execute-Verify loop. "
-        f"Remember: tool functions return JSON strings — use json.loads(). "
-        f"Return ONLY the JSON output as described in your instructions."
-    )
+        task = (
+            f"Design a novel peptide or mini-protein BINDER for the following "
+            f"target protein. The candidate must be a completely new sequence "
+            f"designed to BIND TO the target — NOT a mutated copy of the target.\n\n"
+            f"Target name: {target_name}\n"
+            f"Identity threshold: {config.identity_threshold:.0%}\n\n"
+            f"Target FASTA:\n```\n{target_fasta}```\n\n"
+            f"Follow the Plan-Execute-Verify loop. "
+            f"Remember: tool functions return JSON strings — use json.loads(). "
+            f"You have access to MCP tools provided by the biomcp server. Use them to better reason and find new binders. "
+            f"Return ONLY the JSON output as described in your instructions."
+        )
 
-    print(f"[agent] Starting protein candidate design for '{target_name}'...")
-    print(f"[agent] Model: {config.model_id}")
-    print(f"[agent] Identity threshold: {config.identity_threshold:.0%}")
-    print()
+        print(f"[agent] Starting protein candidate design for '{target_name}'...")
+        print(f"[agent] Model: {config.model_id}")
+        print(f"[agent] Identity threshold: {config.identity_threshold:.0%}")
+        print()
 
-    result = agent.run(task)
+        result = agent.run(task)
 
-    # Save the full reasoning trace (all steps + final output)
-    formatted = _format_result(result, target_fasta, config)
-    trace_path = _save_agent_log(agent, config, result=formatted)
+        # Save the full reasoning trace (all steps + final output)
+        formatted = _format_result(result, target_fasta, config)
+        trace_path = _save_agent_log(agent, config, result=formatted)
 
     # Inject the trace path into the output JSON
     try:
