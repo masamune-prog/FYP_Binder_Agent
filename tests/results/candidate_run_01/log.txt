@@ -1,0 +1,15 @@
+2026-05-20 12:36:42,428 Running on GPU
+2026-05-20 12:36:44,780 Found 6 citations for tools or databases
+2026-05-20 12:36:44,989 Query 1/1: candidate_run_01 (length 1315)
+2026-05-20 12:36:45,268 No user agent specified. Please set a user agent (e.g., 'toolname/version contact@email') to help us debug in case of problems. This warning will become an error in the future.
+2026-05-20 12:36:47,380 No user agent specified. Please set a user agent (e.g., 'toolname/version contact@email') to help us debug in case of problems. This warning will become an error in the future.
+2026-05-20 12:36:50,879 Setting max_seq=508, max_extra_seq=343
+2026-05-20 12:56:52,309 alphafold2_multimer_v3_model_1_seed_000 recycle=0 pLDDT=56.9 pTM=0.425 ipTM=0.131
+2026-05-20 13:14:05,508 alphafold2_multimer_v3_model_1_seed_000 recycle=1 pLDDT=61 pTM=0.495 ipTM=0.141 tol=7.7
+2026-05-20 13:22:04,649 alphafold2_multimer_v3_model_1_seed_000 recycle=2 pLDDT=62.5 pTM=0.491 ipTM=0.161 tol=6.24
+2026-05-20 13:26:43,366 alphafold2_multimer_v3_model_1_seed_000 recycle=3 pLDDT=63.3 pTM=0.498 ipTM=0.27 tol=9.79
+2026-05-20 13:31:21,823 alphafold2_multimer_v3_model_1_seed_000 recycle=4 pLDDT=63.7 pTM=0.487 ipTM=0.331 tol=3.34
+2026-05-20 13:35:59,484 alphafold2_multimer_v3_model_1_seed_000 recycle=5 pLDDT=64.1 pTM=0.497 ipTM=0.357 tol=8.28
+2026-05-20 13:40:36,919 alphafold2_multimer_v3_model_1_seed_000 recycle=6 pLDDT=63.8 pTM=0.507 ipTM=0.305 tol=3.39
+2026-05-20 13:40:36,921 alphafold2_multimer_v3_model_1_seed_000 took 3812.4s (6 recycles)
+2026-05-20 13:45:18,510 alphafold2_multimer_v3_model_2_seed_000 recycle=0 pLDDT=55.1 pTM=0.488 ipTM=0.205

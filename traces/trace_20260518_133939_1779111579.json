@@ -1,0 +1,11 @@
+{
+  "candidate_seq_fasta": ">candidate_SARS-COV2-Spike\nACGHIKLMNPQRSTVWYEDFN",
+  "saved_at": "2026-05-18T13:39:39.844642+00:00",
+  "target_seq_fasta": ">sp|P0DTC2|SPIKE_SARS2",
+  "verification": {
+    "identity_threshold": 80.0,
+    "iedb_max_identity": 0.0,
+    "rejected": false,
+    "sabdab_max_identity": 50.0
+  }
+}
