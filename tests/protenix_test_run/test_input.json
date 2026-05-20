@@ -1,0 +1,14 @@
+[
+  {
+    "name": "protenix_dummy_test",
+    "modelSeeds": [1],
+    "sequences": [
+      {
+        "proteinChain": {
+          "sequence": "MAAGVK",
+          "count": 1
+        }
+      }
+    ]
+  }
+]

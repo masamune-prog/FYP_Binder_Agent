@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reasoning Trace Analyzer</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --success: #4ade80;
+            --warning: #facc15;
+            --error: #f87171;
+            --border: #334155;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--accent);
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .panel h2 {
+            margin-top: 0;
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        /* Custom File Input Styling */
+        .file-upload-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-upload-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            height: 100%;
+        }
+
+        .btn {
+            display: block;
+            background-color: var(--accent);
+            color: #000;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            text-align: center;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .btn:hover {
+            background-color: #7dd3fc;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            background-color: #0b1120;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        select:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+        }
+
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .step-card {
+            background-color: #0f172a;
+            border-left: 4px solid var(--border);
+            padding: 15px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .step-card.PlanningStep {
+            border-left-color: var(--accent);
+        }
+
+        .step-card.ActionStep {
+            border-left-color: var(--success);
+        }
+
+        .step-card.TaskStep {
+            border-left-color: var(--warning);
+        }
+
+        .step-card.Error {
+            border-left-color: var(--error);
+        }
+
+        .step-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .step-type {
+            font-weight: bold;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .PlanningStep .step-type {
+            color: var(--accent);
+        }
+
+        .ActionStep .step-type {
+            color: var(--success);
+        }
+
+        .TaskStep .step-type {
+            color: var(--warning);
+        }
+
+        .step-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            gap: 15px;
+        }
+
+        pre {
+            background-color: #000;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 15px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .final-output {
+            background-color: #14532d;
+            border: 1px solid var(--success);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Reasoning Trace Analyzer</h1>
+    </header>
+
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="panel">
+                <h2>Load Traces</h2>
+                <div class="file-upload-wrapper">
+                    <button class="btn">📁 Select 'traces' Folder</button>
+                    <!-- webkitdirectory allows folder selection -->
+                    <input type="file" id="folderInput" webkitdirectory directory multiple
+                        onchange="handleFolderSelection(event)">
+                </div>
+
+                <select id="traceSelector" disabled onchange="handleTraceSelection()">
+                    <option value="">-- No folder selected --</option>
+                </select>
+            </div>
+
+            <div class="panel" id="metaPanel" style="display: none;">
+                <h2>Configuration</h2>
+                <div id="metaContent"></div>
+            </div>
+
+            <div class="panel" id="statsPanel" style="display: none;">
+                <h2>Execution Stats</h2>
+                <div id="statsContent"></div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content" id="traceContainer">
+            <div style="color: var(--text-muted); text-align: center; margin-top: 50px;">
+                Click "Select 'traces' Folder" to begin exploring your logs.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let availableFiles = {};
+
+        function handleFolderSelection(event) {
+            const files = event.target.files;
+            const selector = document.getElementById('traceSelector');
+            availableFiles = {};
+
+            selector.innerHTML = '<option value="">-- Select a Trace --</option>';
+
+            // Filter for JSON files
+            for (let file of files) {
+                if (file.name.endsWith('.json')) {
+                    availableFiles[file.name] = file;
+                    const option = document.createElement('option');
+                    option.value = file.name;
+                    option.textContent = file.name;
+                    selector.appendChild(option);
+                }
+            }
+
+            if (Object.keys(availableFiles).length > 0) {
+                selector.disabled = false;
+                document.getElementById('traceContainer').innerHTML =
+                    `<div style="color: var(--success); text-align: center; margin-top: 50px;">
+                        Successfully loaded ${Object.keys(availableFiles).length} trace(s).<br>Please select one from the dropdown menu.
+                    </div>`;
+            } else {
+                selector.disabled = true;
+                selector.innerHTML = '<option value="">-- No JSON files found --</option>';
+            }
+        }
+
+        function handleTraceSelection() {
+            const selectedName = document.getElementById('traceSelector').value;
+            if (!selectedName || !availableFiles[selectedName]) return;
+
+            const file = availableFiles[selectedName];
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                processTraceData(e.target.result);
+            };
+
+            reader.readAsText(file);
+        }
+
+        function processTraceData(jsonString) {
+            const container = document.getElementById('traceContainer');
+            const metaPanel = document.getElementById('metaPanel');
+            const statsPanel = document.getElementById('statsPanel');
+
+            try {
+                const trace = JSON.parse(jsonString);
+                container.innerHTML = '<div class="timeline" id="timeline"></div>';
+                const timeline = document.getElementById('timeline');
+
+                // Populate Meta
+                if (trace.config) {
+                    metaPanel.style.display = 'flex';
+                    document.getElementById('metaContent').innerHTML = `
+                        <div class="stat-row"><span class="stat-label">Model ID:</span> <span>${trace.config.model_id || 'N/A'}</span></div>
+                        <div class="stat-row"><span class="stat-label">Target:</span> <span>${trace.config.target_name || 'N/A'}</span></div>
+                        <div class="stat-row"><span class="stat-label">Threshold:</span> <span>${trace.config.identity_threshold || 'N/A'}</span></div>
+                        <div class="stat-row"><span class="stat-label">Created:</span> <span>${trace.created_at ? new Date(trace.created_at).toLocaleString() : 'N/A'}</span></div>
+                    `;
+                }
+
+                // Populate Stats
+                if (trace.steps) {
+                    statsPanel.style.display = 'flex';
+                    let totalTime = 0;
+                    let totalTokens = 0;
+
+                    trace.steps.forEach(step => {
+                        if (step.timing && step.timing.duration) totalTime += step.timing.duration;
+                        if (step.token_usage && step.token_usage.total_tokens) totalTokens += step.token_usage.total_tokens;
+                    });
+
+                    document.getElementById('statsContent').innerHTML = `
+                        <div class="stat-row"><span class="stat-label">Total Steps:</span> <span>${trace.num_steps || trace.steps.length}</span></div>
+                        <div class="stat-row"><span class="stat-label">Total Time:</span> <span>${totalTime.toFixed(2)}s</span></div>
+                        <div class="stat-row"><span class="stat-label">Total Tokens:</span> <span>${totalTokens.toLocaleString()}</span></div>
+                    `;
+                }
+
+                // Populate Steps
+                if (trace.steps && trace.steps.length > 0) {
+                    trace.steps.forEach((step, index) => {
+                        const card = document.createElement('div');
+                        const hasError = step.error ? 'Error' : '';
+                        card.className = `step-card ${step._step_type} ${hasError}`;
+
+                        let headerHtml = `
+                            <div class="step-header">
+                                <div class="step-type">Step ${step.step_number !== undefined ? step.step_number : index}: ${step._step_type || 'Unknown'}</div>
+                                <div class="step-meta">
+                                    ${step.timing ? `<span>⏱️ ${step.timing.duration.toFixed(2)}s</span>` : ''}
+                                    ${step.token_usage ? `<span>🪙 ${step.token_usage.total_tokens} tokens</span>` : ''}
+                                </div>
+                            </div>
+                        `;
+
+                        let bodyHtml = '';
+
+                        // Task Step
+                        if (step.task) {
+                            bodyHtml += `<div class="section-title">Initial Task</div><pre>${escapeHtml(step.task)}</pre>`;
+                        }
+
+                        // Plan
+                        if (step.plan) {
+                            bodyHtml += `<div class="section-title">Internal Plan</div><pre>${escapeHtml(step.plan)}</pre>`;
+                        }
+
+                        // Model Output Message
+                        if (step.model_output_message && step.model_output_message.content) {
+                            bodyHtml += `<div class="section-title">Model Thought Process</div><pre>${escapeHtml(step.model_output_message.content)}</pre>`;
+                        }
+
+                        // Code Action
+                        if (step.code_action) {
+                            bodyHtml += `<div class="section-title">Action Execution (Python)</div><pre style="color: var(--accent);">${escapeHtml(step.code_action)}</pre>`;
+                        }
+
+                        // Observations
+                        if (step.observations) {
+                            bodyHtml += `<div class="section-title">Environment Observation / Logs</div><pre style="color: var(--success);">${escapeHtml(step.observations)}</pre>`;
+                        }
+
+                        // Error
+                        if (step.error) {
+                            bodyHtml += `<div class="section-title" style="color: var(--error);">Error Detected</div><pre style="color: var(--error); border-color: var(--error);">${escapeHtml(step.error.message || JSON.stringify(step.error))}</pre>`;
+                        }
+
+                        // Final Answer Flag
+                        if (step.is_final_answer) {
+                            bodyHtml += `<div class="section-title" style="color: var(--warning);">🏁 Process Terminated</div>`;
+                        }
+
+                        card.innerHTML = headerHtml + bodyHtml;
+                        timeline.appendChild(card);
+                    });
+                } else {
+                    timeline.innerHTML = `<div style="color: var(--text-muted); padding: 20px;">No steps found in this trace.</div>`;
+                }
+
+                // Final Output
+                if (trace.final_output) {
+                    const finalCard = document.createElement('div');
+                    finalCard.className = `step-card final-output`;
+                    finalCard.innerHTML = `
+                        <div class="step-header">
+                            <div class="step-type" style="color: var(--success);">Final Result</div>
+                        </div>
+                        <pre style="background: rgba(0,0,0,0.3); border:none;">${escapeHtml(JSON.stringify(trace.final_output, null, 2))}</pre>
+                    `;
+                    timeline.appendChild(finalCard);
+                }
+
+            } catch (e) {
+                container.innerHTML = `<div style="color: var(--error); padding: 20px;">Invalid JSON format. Please check the file.<br><br>Error details: ${e.message}</div>`;
+            }
+        }
+
+        // Helper to escape HTML tags in text
+        function escapeHtml(unsafe) {
+            if (typeof unsafe !== 'string') return unsafe;
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+
+</html>

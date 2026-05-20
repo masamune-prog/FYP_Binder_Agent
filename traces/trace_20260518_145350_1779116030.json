@@ -1,0 +1,14 @@
+{
+  "candidate_sequences": [
+    {
+      "accepted": true,
+      "max_identity_iedb": 0.0,
+      "max_identity_sabdab": 70.0,
+      "name": "candidate_SARS-COV2-Spike",
+      "sequence": "NWSPKTFGAWLQY"
+    }
+  ],
+  "process": "The candidate was checked against SAbDab and IEDB using BLASTp, both checks showed identities below the threshold.",
+  "saved_at": "2026-05-18T14:53:50.272716+00:00",
+  "target": "SARS-COV2-Spike"
+}

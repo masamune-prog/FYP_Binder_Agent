@@ -279,9 +279,9 @@ def run_protenix_filter(
     try:
         result = subprocess.run(
             [
-                protenix_bin, "pred",
-                "-i", str(input_json),
-                "-o", str(output_dir),
+                protenix_bin, "predict",
+                "--inputs", str(input_json),
+                "--output", str(output_dir),
                 "--seeds", seeds,
             ],
             capture_output=True,
