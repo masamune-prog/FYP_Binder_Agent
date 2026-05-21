@@ -131,7 +131,9 @@ At the end of your code, assemble a Python dict named result with these keys:
     - design_rationale
     - design_notes
 
-Print json.dumps(result, indent=2, default=str).
+If you have found a suitable candidate, call the final_answer tool with the
+result JSON instead of continuing to reason. If you are not ready to finish
+yet, print json.dumps(result, indent=2, default=str).
 """
 
 
@@ -255,7 +257,7 @@ def _build_reasoning_task(
         indent=2,
         default=str,
     )
-
+    #40-120 residues for alphafold to remain viable, and to fit within token limits for reasoning
     return (
         f"Design a novel binder for the target protein using the research\n"
         f"summary below. This is attempt {attempt} of 3.\n\n"
@@ -267,6 +269,8 @@ def _build_reasoning_task(
         f"Return a JSON object with keys candidate_sequence, design_rationale,"
         f" and design_notes. The candidate_sequence must be a plain amino acid"
         f" string, 40-120 residues long, using standard amino acid codes only."
+        f" If you have a suitable candidate, call the final_answer tool with"
+        f" the completed JSON object."
     )
 
 
