@@ -41,6 +41,10 @@ def summarize_trace(trace: dict) -> str:
 
     if "model_id" in trace:
         lines.append(f"  Model:      {trace['model_id']}")
+    if "research_model_id" in trace:
+        lines.append(f"  Research:   {trace['research_model_id']}")
+    if "reasoning_model_id" in trace:
+        lines.append(f"  Reasoning:  {trace['reasoning_model_id']}")
     if "target_name" in trace:
         lines.append(f"  Target:     {trace['target_name']}")
     if "identity_threshold" in trace:

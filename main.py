@@ -12,6 +12,13 @@ Usage::
         --model o3-mini \\
         --identity-threshold 0.80
 
+    # Use different models for research and reasoning
+    uv run python main.py \
+        --target-fasta targets/egfr.fasta \
+        --target-name EGFR \
+        --research-model gpt-4.1-mini \
+        --reasoning-model o3-mini
+
     # Skip structural filters
     uv run python main.py --target-fasta targets/egfr.fasta \\
         --target-name EGFR --no-af2ig --no-protenix
@@ -54,7 +61,17 @@ def build_parser() -> ArgumentParser:
     parser.add_argument(
         "--model",
         default="o3-mini",
-        help="OpenAI model ID to use (default: o3-mini). Must be a reasoning model.",
+        help="Default model ID to use for both agents unless overridden.",
+    )
+    parser.add_argument(
+        "--research-model",
+        default=None,
+        help="Model ID to use for the research agent (defaults to --model).",
+    )
+    parser.add_argument(
+        "--reasoning-model",
+        default=None,
+        help="Model ID to use for the reasoning agent (defaults to --model).",
     )
     parser.add_argument(
         "--output",
@@ -113,6 +130,8 @@ def main(argv: list[str] | None = None) -> int:
         target_name=args.target_name,
         identity_threshold=args.identity_threshold,
         model_id=args.model,
+        research_model_id=args.research_model,
+        reasoning_model_id=args.reasoning_model,
     )
 
     # Run agent
