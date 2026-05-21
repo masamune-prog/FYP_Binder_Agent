@@ -1,0 +1,20 @@
+{
+  "candidate_fasta": ">candidate_unknown_target\nMKKAFWLLDVPTQEWLKRLPAFSKQTLLAEYDKVWFLEQRRRRL",
+  "candidate_id": "candidate_unknown_target",
+  "candidate_sequence": "MKKAFWLLDVPTQEWLKRLPAFSKQTLLAEYDKVWFLEQRRRRL",
+  "design_rationale": "This de novo designed peptide adopts an alpha-helical structure enriched with hydrophobic residues (F, W, L) to engage hydrophobic pockets and incorporates charged residues (K, R, D, E) for solubility and electrostatic interactions. The design avoids any direct similarity to the target protein (MDM2) and meets the identity threshold of <80%, as validated by BLASTp results against SAbDab and IEDB (max_identity: 0.0).",
+  "saved_at": "2026-05-20T15:50:29.682569+00:00",
+  "target_name": "unknown_target",
+  "validation": {
+    "IEDB_BLASTp": {
+      "max_identity": 0.0,
+      "num_hits": 0,
+      "top_hits": []
+    },
+    "SAbDab_BLASTp": {
+      "max_identity": 0.0,
+      "num_hits": 0,
+      "top_hits": []
+    }
+  }
+}
