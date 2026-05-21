@@ -91,9 +91,9 @@ def run_af2ig_filter(
 ) -> FilterResult:
     """Run AlphaFold2 Initial-Guess filter via ColabFold multimer.
 
-    Creates a combined FASTA with both chains separated by ``:``, runs
-    ``colabfold_batch`` with ``--model-type alphafold2_multimer_v3``,
-    and parses the resulting scores for ipTM.
+    Creates a combined FASTA with both chains separated by ``:``, runs the
+    ColabFold Python API (``get_queries`` + ``run``), and parses the
+    resulting scores for ipTM.
 
     Args:
         candidate_fasta: Candidate binder in FASTA format.
@@ -103,15 +103,16 @@ def run_af2ig_filter(
     Returns:
         FilterResult with pass/fail and confidence scores.
     """
-    colabfold_bin = _ensure_tool("colabfold_batch")
     output_dir = _make_output_dir("af2ig")
 
     candidate_seq = _extract_sequence(candidate_fasta)
     target_seq = _extract_sequence(target_fasta)
 
-    # ColabFold expects chains separated by ':'
+    # ColabFold multimer expects chains separated by ':' in a single FASTA entry.
     combined_seq = f"{candidate_seq}:{target_seq}"
-    input_fasta = output_dir / "input.fasta"
+    input_dir = output_dir / "tmp_input"
+    input_dir.mkdir(parents=True, exist_ok=True)
+    input_fasta = input_dir / "candidate_target_complex.fasta"
     input_fasta.write_text(
         f">candidate_target_complex\n{combined_seq}\n",
         encoding="utf-8",
@@ -123,32 +124,40 @@ def run_af2ig_filter(
     print(f"[AF2-IG] Output: {output_dir}")
 
     try:
-        result = subprocess.run(
-            [
-                colabfold_bin,
-                str(input_fasta),
-                str(output_dir),
-                "--model-type", "alphafold2_multimer_v3",
-                "--num-models", "1",
-                "--num-seeds", "1",
-                "--amber",  # relax with AMBER
-            ],
-            capture_output=True,
-            text=True,
-            timeout=1800,  # 30 min timeout
+        # Import inside the function so the module can still be imported without ColabFold.
+        from colabfold.batch import get_queries, run
+        from colabfold.utils import setup_logging
+    except Exception as exc:
+        return FilterResult(
+            filter_name="AF2-IG",
+            passed=False,
+            iptm=0.0,
+            threshold=iptm_threshold,
+            output_dir=str(output_dir),
+            error=(
+                "ColabFold Python API import failed. Install ColabFold in this "
+                f"environment. Details: {exc}"
+            ),
         )
 
-        if result.returncode != 0:
-            return FilterResult(
-                filter_name="AF2-IG",
-                passed=False,
-                iptm=0.0,
-                threshold=iptm_threshold,
-                output_dir=str(output_dir),
-                error=f"colabfold_batch failed (rc={result.returncode}): "
-                      f"{result.stderr[-500:] if result.stderr else 'no stderr'}",
-            )
+    try:
+        setup_logging(output_dir / "log.txt")
+        queries, is_complex = get_queries(str(input_dir))
 
+        # Match the tested invocation defaults from the working script.
+        run(
+            queries=queries,
+            result_dir=str(output_dir),
+            is_complex=is_complex,
+            use_bfloat16=False,
+            use_templates=False,
+            msa_mode="MMseqs2 (UniRef+Environmental)",
+            model_type="alphafold2_multimer_v3",
+            num_models=1,
+            num_recycles=3,
+            num_relax=1,
+            relax_max_iterations=2000,
+        )
     except subprocess.TimeoutExpired:
         return FilterResult(
             filter_name="AF2-IG",
@@ -156,8 +165,22 @@ def run_af2ig_filter(
             iptm=0.0,
             threshold=iptm_threshold,
             output_dir=str(output_dir),
-            error="ColabFold timed out after 30 minutes",
+            error="ColabFold timed out",
         )
+    except Exception as exc:
+        return FilterResult(
+            filter_name="AF2-IG",
+            passed=False,
+            iptm=0.0,
+            threshold=iptm_threshold,
+            output_dir=str(output_dir),
+            error=f"ColabFold run failed: {exc}",
+        )
+    finally:
+        try:
+            input_fasta.unlink(missing_ok=True)
+        except OSError:
+            pass
 
     # Parse scores — ColabFold writes *_scores_rank_*.json
     scores = _parse_colabfold_scores(output_dir)

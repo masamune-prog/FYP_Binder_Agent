@@ -90,6 +90,8 @@ def run_remote_blastp_search(query_fasta: str, database: str) -> str:
     from Bio.Blast import NCBIWWW, NCBIXML
 
     # Map our conceptual databases to NCBI databases
+    #SAbDab is just a specialized subset of the PDB (focused strictly on antibodies), searching pdb will capture those structures, but it will also search every other non-antibody structural protein known to science.
+    #for iedb we use nr as iedb epitopes are subset
     db_map = {
         "SAbDab": "pdb",
         "sabdab": "pdb",
