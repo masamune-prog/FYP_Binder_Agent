@@ -12,6 +12,8 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 import requests
+from rdkit import Chem
+from rdkit.Chem import Descriptors, Lipinski as RDKitLipinski
 from smolagents import tool, DuckDuckGoSearchTool, VisitWebpageTool
 
 # Lazily instantiated so the import itself doesn't make a network call
@@ -31,6 +33,212 @@ def _get_visit() -> "VisitWebpageTool":
     if _visit_tool is None:
         _visit_tool = VisitWebpageTool()
     return _visit_tool
+
+
+def _is_peptide_like(mol: Chem.Mol) -> bool:
+    """Heuristically classify a molecule as peptide-like."""
+    if mol is None:
+        return False
+
+    amide_bond_pattern = Chem.MolFromSmarts("C(=O)N")
+    amide_bonds = len(mol.GetSubstructMatches(amide_bond_pattern))
+    return amide_bonds >= 4 and mol.GetNumAtoms() >= 30
+
+
+@tool
+def fasta_to_smiles(fasta_text: str) -> str:
+    """Convert a single protein FASTA record into a peptide SMILES string.
+
+    Args:
+        fasta_text: FASTA text containing a single protein or peptide record.
+    """
+    if not isinstance(fasta_text, str) or not fasta_text.strip():
+        raise ValueError("FASTA input must be a non-empty string.")
+
+    mol = Chem.MolFromFASTA(fasta_text)
+    if mol is None:
+        raise ValueError("RDKit could not convert the FASTA sequence to a molecule.")
+
+    return Chem.MolToSmiles(mol)
+
+
+@tool
+def check_lipinski(smiles: str, is_peptide: bool | None = None) -> str:
+    """Run a peptide-aware Lipinski-style screen on a SMILES string.
+
+    Args:
+        smiles: Candidate molecule encoded as SMILES.
+        is_peptide: Force peptide-aware thresholds when True, or let the
+            tool infer peptide-likeness when None.
+    """
+    mol = Chem.MolFromSmiles(smiles)
+    if mol is None:
+        return json.dumps({"smiles": smiles, "passed": False, "reason": "Invalid SMILES"}, indent=2)
+
+    peptide_mode = _is_peptide_like(mol) if is_peptide is None else is_peptide
+    mw = Descriptors.MolWt(mol)
+    logp = Descriptors.MolLogP(mol)
+    h_donors = RDKitLipinski.NumHDonors(mol)
+    h_acceptors = RDKitLipinski.NumHAcceptors(mol)
+
+    if peptide_mode:
+        passed = mw < 2000 and -2 <= logp <= 8
+        payload = {
+            "smiles": smiles,
+            "is_peptide": True,
+            "passed": passed,
+            "mw": round(mw, 2),
+            "logp": round(logp, 2),
+            "h_donors": h_donors,
+            "h_acceptors": h_acceptors,
+            "reason": "Passed peptide-aware structural check" if passed else "Failed peptide-aware structural check",
+        }
+        return json.dumps(payload, indent=2)
+
+    violations = 0
+    if mw >= 500:
+        violations += 1
+    if logp >= 5:
+        violations += 1
+    if h_donors >= 5:
+        violations += 1
+    if h_acceptors >= 10:
+        violations += 1
+
+    passed = violations <= 1
+    payload = {
+        "smiles": smiles,
+        "is_peptide": False,
+        "passed": passed,
+        "mw": round(mw, 2),
+        "logp": round(logp, 2),
+        "h_donors": h_donors,
+        "h_acceptors": h_acceptors,
+        "violations": violations,
+        "reason": "Passed Lipinski Ro5" if passed else "Failed Lipinski Ro5",
+    }
+    return json.dumps(payload, indent=2)
+
+
+@tool
+def passes_pains_filter(smiles: str) -> str:
+    """Check whether a SMILES string matches RDKit PAINS catalog entries.
+
+    Args:
+        smiles: Candidate molecule encoded as SMILES.
+    """
+    from rdkit.Chem.FilterCatalog import FilterCatalog, FilterCatalogParams
+
+    mol = Chem.MolFromSmiles(smiles)
+    if mol is None:
+        return json.dumps({"smiles": smiles, "passed": False, "reason": "Invalid SMILES"}, indent=2)
+
+    params = FilterCatalogParams()
+    params.AddCatalog(FilterCatalogParams.FilterCatalogs.PAINS)
+    catalog = FilterCatalog(params)
+    passed = not catalog.HasMatch(mol)
+
+    return json.dumps(
+        {
+            "smiles": smiles,
+            "passed": passed,
+            "reason": "Passed PAINS filter" if passed else "Flagged by PAINS",
+        },
+        indent=2,
+    )
+
+'''
+@tool
+def check_synthetic_accessibility(smiles: str, max_score: float = 4.5, is_peptide: bool | None = None) -> str:
+    """Evaluate synthetic accessibility using RDKit's SA score helper when available.
+
+    Args:
+        smiles: Candidate molecule encoded as SMILES.
+        max_score: Maximum SA score allowed for small molecules.
+        is_peptide: Force peptide-aware handling when True, or let the tool
+            infer peptide-likeness when None.
+    """
+    mol = Chem.MolFromSmiles(smiles)
+    if mol is None:
+        return json.dumps({"smiles": smiles, "passed": False, "reason": "Invalid SMILES"}, indent=2)
+
+    peptide_mode = _is_peptide_like(mol) if is_peptide is None else is_peptide
+    if peptide_mode:
+        return json.dumps(
+            {
+                "smiles": smiles,
+                "is_peptide": True,
+                "passed": True,
+                "score": None,
+                "reason": "Skipped SA score for peptide-like binder",
+            },
+            indent=2,
+        )
+
+    if sascorer is not None:
+        score = sascorer.calculateScore(mol)
+    else:
+        score = float("inf")
+
+    passed = score < max_score
+    return json.dumps(
+        {
+            "smiles": smiles,
+            "is_peptide": False,
+            "passed": passed,
+            "score": round(score, 3) if score != float("inf") else score,
+            "max_score": max_score,
+            "reason": "Passed synthetic accessibility check" if passed else "High Synthetic Complexity",
+        },
+        indent=2,
+    )
+'''
+
+@tool
+def pipeline_filter(smiles: str, is_peptide: bool | None = None) -> str:
+    """Run the complete structural screening triage for a single SMILES string.
+
+    Args:
+        smiles: Candidate molecule encoded as SMILES.
+        is_peptide: Force peptide-aware screening when True, or let the tool
+            infer peptide-likeness when None.
+    """
+    mol = Chem.MolFromSmiles(smiles)
+    if not mol:
+        return json.dumps({"smiles": smiles, "passed": False, "reason": "Invalid SMILES"}, indent=2)
+
+    peptide_mode = _is_peptide_like(mol) if is_peptide is None else is_peptide
+
+    lipinski_result = json.loads(check_lipinski(smiles, peptide_mode))
+    pains_result = json.loads(passes_pains_filter(smiles))
+    #synthetic_result = json.loads(check_synthetic_accessibility(smiles, is_peptide=peptide_mode))
+
+    # passed = bool(lipinski_result.get("passed")) and bool(pains_result.get("passed")) and bool(
+    #     synthetic_result.get("passed")
+    # )
+    passed = bool(lipinski_result.get("passed")) and bool(pains_result.get("passed"))
+
+    reasons = []
+    if not lipinski_result.get("passed"):
+        reasons.append(lipinski_result.get("reason", "Failed Lipinski Ro5"))
+    if not pains_result.get("passed"):
+        reasons.append(pains_result.get("reason", "Flagged by PAINS"))
+    '''
+    if not synthetic_result.get("passed"):
+        reasons.append(synthetic_result.get("reason", "High Synthetic Complexity"))
+    '''
+    return json.dumps(
+        {
+            "smiles": smiles,
+            "is_peptide": peptide_mode,
+            "passed": passed,
+            "lipinski": lipinski_result,
+            "pains": pains_result,
+            #"synthetic_accessibility": synthetic_result,
+            "reason": ", ".join(reasons) if not passed else "Passed All Filters",
+        },
+        indent=2,
+    )
 
 
 @tool

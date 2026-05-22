@@ -18,6 +18,11 @@ from typing import Any
 from smolagents import CodeAgent, MCPClient
 from mcp import StdioServerParameters
 from core.smolagent_tools import (
+    check_lipinski,
+    #check_synthetic_accessibility,
+    fasta_to_smiles,
+    passes_pains_filter,
+    pipeline_filter,
     run_remote_blastp_search,
     query_iedb,
     search_sabdab,
@@ -113,6 +118,8 @@ You are the reasoning agent in a two-agent protein design pipeline.
 
 IMPORTANT: You are a CodeAgent. You MUST write Python code in every step.
 Never output raw JSON. Do not call external tools in this stage.
+You may use the local structural screening tools after you draft a candidate
+sequence.
 Do ONE step per code block - do NOT combine all steps into a single block.
 
 ═══ MISSION ═══
@@ -125,11 +132,14 @@ Hard constraints:
     - Use standard amino acid codes only.
     - Aim for a length between 40 and 120 residues.
     - Make the candidate plausibly compatible with the research findings.
-
+    - After proposing a candidate_sequence, immediately run the local
+      structural checks on the candidate FASTA before calling final_answer.
 At the end of your code, assemble a Python dict named result with these keys:
     - candidate_sequence
     - design_rationale
     - design_notes
+
+The design_notes should include the structural screening outcome.
 
 If you have found a suitable candidate, call the final_answer tool with the
 result JSON instead of continuing to reason. If you are not ready to finish
@@ -269,8 +279,11 @@ def _build_reasoning_task(
         f"Return a JSON object with keys candidate_sequence, design_rationale,"
         f" and design_notes. The candidate_sequence must be a plain amino acid"
         f" string, 40-120 residues long, using standard amino acid codes only."
-        f" If you have a suitable candidate, call the final_answer tool with"
-        f" the completed JSON object."
+        f" After proposing the candidate_sequence, convert it to FASTA and run"
+        f" the local structural checks before calling final_answer. If the"
+        f" candidate is peptide-like, use the peptide-aware screening path."
+        f" Include the screening outcome in design_notes. If you have a suitable"
+        f" candidate, call the final_answer tool with the completed JSON object."
     )
 
 
@@ -324,7 +337,7 @@ def create_reasoning_agent(model_id: str) -> CodeAgent:
     model = _create_model(model_id)
     return CodeAgent(
         name="reasoning_agent",
-        tools=[],
+        tools=[fasta_to_smiles, check_lipinski, passes_pains_filter, pipeline_filter],
         model=model,
         planning_interval=1,
         max_steps=16,
