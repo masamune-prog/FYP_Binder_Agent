@@ -234,6 +234,38 @@
             background-color: #14532d;
             border: 1px solid var(--success);
         }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 10px;
+        }
+
+        .summary-card {
+            background-color: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+        }
+
+        .summary-card h3 {
+            margin: 0 0 8px 0;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .summary-card pre {
+            margin: 0;
+        }
+
+        .trace-file-name {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 6px;
+            word-break: break-word;
+        }
     </style>
 </head>
 
@@ -292,10 +324,11 @@
             // Filter for JSON files
             for (let file of files) {
                 if (file.name.endsWith('.json')) {
-                    availableFiles[file.name] = file;
+                    const traceKey = file.webkitRelativePath || file.name;
+                    availableFiles[traceKey] = file;
                     const option = document.createElement('option');
-                    option.value = file.name;
-                    option.textContent = file.name;
+                    option.value = traceKey;
+                    option.textContent = traceKey;
                     selector.appendChild(option);
                 }
             }
@@ -335,14 +368,51 @@
                 const trace = JSON.parse(jsonString);
                 container.innerHTML = '<div class="timeline" id="timeline"></div>';
                 const timeline = document.getElementById('timeline');
+                metaPanel.style.display = 'none';
+                statsPanel.style.display = 'none';
 
-                // Populate Meta
-                if (trace.config) {
+                const normalized = normalizeTrace(trace);
+
+                if (normalized.traceKind === 'reasoning_trace') {
                     metaPanel.style.display = 'flex';
                     document.getElementById('metaContent').innerHTML = `
-                        <div class="stat-row"><span class="stat-label">Model ID:</span> <span>${trace.config.model_id || 'N/A'}</span></div>
-                        <div class="stat-row"><span class="stat-label">Target:</span> <span>${trace.config.target_name || 'N/A'}</span></div>
-                        <div class="stat-row"><span class="stat-label">Threshold:</span> <span>${trace.config.identity_threshold || 'N/A'}</span></div>
+                        <div class="summary-grid">
+                            <div class="summary-card">
+                                <h3>Trace Metadata</h3>
+                                <div class="stat-row"><span class="stat-label">Kind:</span> <span>${escapeHtml(normalized.traceKind)}</span></div>
+                                <div class="stat-row"><span class="stat-label">Target:</span> <span>${escapeHtml(normalized.meta.target_name || 'N/A')}</span></div>
+                                <div class="stat-row"><span class="stat-label">Model:</span> <span>${escapeHtml(normalized.meta.model_id || 'N/A')}</span></div>
+                                <div class="stat-row"><span class="stat-label">Identity Threshold:</span> <span>${escapeHtml(String(normalized.meta.identity_threshold ?? 'N/A'))}</span></div>
+                                <div class="stat-row"><span class="stat-label">Created:</span> <span>${normalized.meta.created_at ? new Date(normalized.meta.created_at).toLocaleString() : 'N/A'}</span></div>
+                            </div>
+                            ${normalized.researchSummary ? `
+                            <div class="summary-card">
+                                <h3>Research Summary</h3>
+                                <pre>${escapeHtml(JSON.stringify(normalized.researchSummary, null, 2))}</pre>
+                            </div>` : ''}
+                        </div>
+                    `;
+
+                    statsPanel.style.display = 'flex';
+                    document.getElementById('statsContent').innerHTML = `
+                        <div class="stat-row"><span class="stat-label">Sections:</span> <span>${normalized.stats.sections}</span></div>
+                        <div class="stat-row"><span class="stat-label">Legacy Steps:</span> <span>${normalized.stats.steps}</span></div>
+                        <div class="stat-row"><span class="stat-label">Attempts:</span> <span>${normalized.stats.attempts}</span></div>
+                        <div class="stat-row"><span class="stat-label">Total Time:</span> <span>${normalized.stats.totalTime.toFixed(2)}s</span></div>
+                        <div class="stat-row"><span class="stat-label">Total Tokens:</span> <span>${normalized.stats.totalTokens.toLocaleString()}</span></div>
+                    `;
+
+                    renderReasoningTrace(normalized, timeline);
+                    return;
+                }
+
+                // Populate Meta
+                if (trace.config || trace.target_name || trace.model_id) {
+                    metaPanel.style.display = 'flex';
+                    document.getElementById('metaContent').innerHTML = `
+                        <div class="stat-row"><span class="stat-label">Model ID:</span> <span>${trace.config?.model_id || trace.model_id || 'N/A'}</span></div>
+                        <div class="stat-row"><span class="stat-label">Target:</span> <span>${trace.config?.target_name || trace.target_name || 'N/A'}</span></div>
+                        <div class="stat-row"><span class="stat-label">Threshold:</span> <span>${trace.config?.identity_threshold || trace.identity_threshold || 'N/A'}</span></div>
                         <div class="stat-row"><span class="stat-label">Created:</span> <span>${trace.created_at ? new Date(trace.created_at).toLocaleString() : 'N/A'}</span></div>
                     `;
                 }
@@ -442,6 +512,193 @@
             } catch (e) {
                 container.innerHTML = `<div style="color: var(--error); padding: 20px;">Invalid JSON format. Please check the file.<br><br>Error details: ${e.message}</div>`;
             }
+        }
+
+        function normalizeTrace(trace) {
+            const traceKind = trace.kind || (trace.reasoning_attempts || trace.agent_logs ? 'reasoning_trace' : 'legacy_trace');
+            const researchSummary = trace.research_summary || null;
+            const reasoningAttempts = Array.isArray(trace.reasoning_attempts) ? trace.reasoning_attempts : [];
+            const agentLogs = Array.isArray(trace.agent_logs) ? trace.agent_logs : [];
+            const legacySteps = Array.isArray(trace.steps) ? trace.steps : [];
+            const stats = buildTraceStats(traceKind, legacySteps, reasoningAttempts, agentLogs, trace.final_output);
+
+            return {
+                trace,
+                traceKind,
+                meta: {
+                    created_at: trace.created_at,
+                    model_id: trace.model_id || trace.config?.model_id || null,
+                    target_name: trace.target_name || trace.config?.target_name || null,
+                    identity_threshold: trace.identity_threshold || trace.config?.identity_threshold || null,
+                },
+                researchSummary,
+                reasoningAttempts,
+                agentLogs,
+                legacySteps,
+                finalOutput: trace.final_output || null,
+                stats,
+            };
+        }
+
+        function buildTraceStats(traceKind, legacySteps, reasoningAttempts, agentLogs, finalOutput) {
+            let totalTime = 0;
+            let totalTokens = 0;
+
+            legacySteps.forEach(step => {
+                if (step.timing && step.timing.duration) totalTime += step.timing.duration;
+                if (step.token_usage && step.token_usage.total_tokens) totalTokens += step.token_usage.total_tokens;
+            });
+
+            reasoningAttempts.forEach(attempt => {
+                if (attempt.timing && attempt.timing.duration) totalTime += attempt.timing.duration;
+                if (attempt.token_usage && attempt.token_usage.total_tokens) totalTokens += attempt.token_usage.total_tokens;
+            });
+
+            agentLogs.forEach(log => {
+                (log.steps || []).forEach(step => {
+                    if (step.timing && step.timing.duration) totalTime += step.timing.duration;
+                    if (step.token_usage && step.token_usage.total_tokens) totalTokens += step.token_usage.total_tokens;
+                });
+            });
+
+            if (finalOutput && traceKind === 'reasoning_trace') {
+                totalTime += 0;
+            }
+
+            return {
+                sections: traceKind === 'reasoning_trace' ? 4 : 1,
+                steps: legacySteps.length,
+                attempts: reasoningAttempts.length,
+                totalTime,
+                totalTokens,
+            };
+        }
+
+        function renderReasoningTrace(normalized, timeline) {
+            if (normalized.researchSummary) {
+                appendCard(timeline, 'Research Summary', JSON.stringify(normalized.researchSummary, null, 2), 'PlanningStep');
+            }
+
+            if (normalized.reasoningAttempts.length > 0) {
+                const attemptsCard = document.createElement('div');
+                attemptsCard.className = 'step-card TaskStep';
+                attemptsCard.innerHTML = `
+                    <div class="step-header">
+                        <div class="step-type">Reasoning Attempts</div>
+                        <div class="step-meta"><span>${normalized.reasoningAttempts.length} attempt(s)</span></div>
+                    </div>
+                `;
+
+                normalized.reasoningAttempts.forEach((attempt, index) => {
+                    attemptsCard.innerHTML += `
+                        <div class="section-title">Attempt ${attempt.attempt || index + 1}</div>
+                        ${attempt.candidate_sequence ? `<div class="section-title">Candidate Sequence</div><pre>${escapeHtml(attempt.candidate_sequence)}</pre>` : ''}
+                        ${attempt.design_rationale ? `<div class="section-title">Design Rationale</div><pre>${escapeHtml(attempt.design_rationale)}</pre>` : ''}
+                        ${attempt.candidate_seq_fasta ? `<div class="section-title">Candidate FASTA</div><pre>${escapeHtml(attempt.candidate_seq_fasta)}</pre>` : ''}
+                        ${attempt.verification ? `<div class="section-title">Attempt Verification</div><pre>${escapeHtml(JSON.stringify(attempt.verification, null, 2))}</pre>` : ''}
+                        ${attempt.decision ? `<div class="section-title">Decision</div><pre>${escapeHtml(String(attempt.decision))}</pre>` : ''}
+                    `;
+                });
+
+                timeline.appendChild(attemptsCard);
+            }
+
+            if (normalized.agentLogs.length > 0) {
+                normalized.agentLogs.forEach(log => {
+                    const logCard = document.createElement('div');
+                    logCard.className = 'step-card ActionStep';
+                    logCard.innerHTML = `
+                        <div class="step-header">
+                            <div class="step-type">${escapeHtml(log.stage || 'Agent Log')}</div>
+                            <div class="step-meta"><span>${escapeHtml(log.model_id || 'N/A')}</span></div>
+                        </div>
+                    `;
+
+                    if (Array.isArray(log.steps)) {
+                        log.steps.forEach((step, index) => {
+                            logCard.innerHTML += renderAgentLogStep(step, index);
+                        });
+                    }
+
+                    timeline.appendChild(logCard);
+                });
+            }
+
+            if (normalized.finalOutput) {
+                const finalCard = document.createElement('div');
+                finalCard.className = 'step-card final-output';
+                finalCard.innerHTML = `
+                    <div class="step-header">
+                        <div class="step-type" style="color: var(--success);">Final Result</div>
+                    </div>
+                    <pre style="background: rgba(0,0,0,0.3); border:none;">${escapeHtml(JSON.stringify(normalized.finalOutput, null, 2))}</pre>
+                `;
+                timeline.appendChild(finalCard);
+            }
+
+            if (!normalized.researchSummary && normalized.reasoningAttempts.length === 0 && normalized.agentLogs.length === 0 && !normalized.finalOutput) {
+                timeline.innerHTML = `<div style="color: var(--text-muted); padding: 20px;">No reasoning trace content found in this file.</div>`;
+            }
+        }
+
+        function renderAgentLogStep(step, index) {
+            const hasError = step.error ? 'Error' : '';
+            let bodyHtml = '';
+
+            bodyHtml += `<div class="section-title">Log Step ${step.step_number !== undefined ? step.step_number : index + 1}</div>`;
+
+            if (step.task) {
+                bodyHtml += `<div class="section-title">Task</div><pre>${escapeHtml(step.task)}</pre>`;
+            }
+
+            if (step.plan) {
+                bodyHtml += `<div class="section-title">Plan</div><pre>${escapeHtml(step.plan)}</pre>`;
+            }
+
+            if (step.model_output_message && step.model_output_message.content) {
+                bodyHtml += `<div class="section-title">Model Output</div><pre>${escapeHtml(typeof step.model_output_message.content === 'string' ? step.model_output_message.content : JSON.stringify(step.model_output_message.content, null, 2))}</pre>`;
+            }
+
+            if (step.code_action) {
+                bodyHtml += `<div class="section-title">Code Action</div><pre style="color: var(--accent);">${escapeHtml(step.code_action)}</pre>`;
+            }
+
+            if (step.observations) {
+                bodyHtml += `<div class="section-title">Observations</div><pre style="color: var(--success);">${escapeHtml(step.observations)}</pre>`;
+            }
+
+            if (step.error) {
+                bodyHtml += `<div class="section-title" style="color: var(--error);">Error Detected</div><pre style="color: var(--error); border-color: var(--error);">${escapeHtml(step.error.message || JSON.stringify(step.error))}</pre>`;
+            }
+
+            if (step.is_final_answer) {
+                bodyHtml += `<div class="section-title" style="color: var(--warning);">Process Terminated</div>`;
+            }
+
+            return `
+                <div class="step-card ${step._step_type || ''} ${hasError}">
+                    <div class="step-header">
+                        <div class="step-type">${escapeHtml(step._step_type || 'Unknown')}</div>
+                        <div class="step-meta">
+                            ${step.timing ? `<span>⏱️ ${step.timing.duration.toFixed(2)}s</span>` : ''}
+                            ${step.token_usage ? `<span>🪙 ${step.token_usage.total_tokens} tokens</span>` : ''}
+                        </div>
+                    </div>
+                    ${bodyHtml}
+                </div>
+            `;
+        }
+
+        function appendCard(timeline, title, content, cardClass) {
+            const card = document.createElement('div');
+            card.className = `step-card ${cardClass || ''}`;
+            card.innerHTML = `
+                <div class="step-header">
+                    <div class="step-type">${escapeHtml(title)}</div>
+                </div>
+                <pre>${escapeHtml(content)}</pre>
+            `;
+            timeline.appendChild(card);
         }
 
         // Helper to escape HTML tags in text

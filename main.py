@@ -40,7 +40,11 @@ from core.agent import AgentConfig, load_fasta_file, run_agent
 def build_parser() -> ArgumentParser:
     parser = ArgumentParser(
         description="Run the smolagents protein candidate design agent",
-        epilog="Requires OPENAI_API_KEY in environment.",
+        epilog=(
+            "Requires API key in environment or passed via --api-key (supports "
+            "CUSTOM_API_KEY, SMOLAGENTS_API_KEY, or OPENAI_API_KEY). "
+            "Supports general/custom API endpoints via --api-base."
+        ),
     )
     parser.add_argument(
         "--target-fasta",
@@ -77,6 +81,16 @@ def build_parser() -> ArgumentParser:
         "--output",
         default=None,
         help="Optional path to write JSON output (default: stdout only)",
+    )
+    parser.add_argument(
+        "--api-base",
+        default=None,
+        help="Custom/general API base URL (e.g., http://localhost:11434/v1 for Ollama, or other custom endpoint)",
+    )
+    parser.add_argument(
+        "--api-key",
+        default=None,
+        help="API Key (defaults to CUSTOM_API_KEY, SMOLAGENTS_API_KEY, or OPENAI_API_KEY environment variables)",
     )
 
     # ── Structural filter flags ──────────────────────────────────────
@@ -132,6 +146,8 @@ def main(argv: list[str] | None = None) -> int:
         model_id=args.model,
         research_model_id=args.research_model,
         reasoning_model_id=args.reasoning_model,
+        api_base=args.api_base,
+        api_key=args.api_key,
     )
 
     # Run agent

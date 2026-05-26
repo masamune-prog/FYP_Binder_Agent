@@ -49,6 +49,8 @@ class AgentConfig:
     model_id: str = "o3-mini"
     research_model_id: str | None = None
     reasoning_model_id: str | None = None
+    api_base: str | None = None
+    api_key: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -151,27 +153,55 @@ yet, print json.dumps(result, indent=2, default=str).
 # Model factory
 # ---------------------------------------------------------------------------
 
-def _create_model(model_id: str):
+def _create_model(
+    model_id: str,
+    api_base: str | None = None,
+    api_key: str | None = None,
+):
     """Create the LLM model for the CodeAgent.
 
-    Tries OpenAIServerModel first (native), falls back to LiteLLMModel.
-    Requires OPENAI_API_KEY in the environment.
+    Supports custom general API endpoints by accepting api_base and api_key.
+    Falls back to environment variables:
+      - API Key: api_key arg -> CUSTOM_API_KEY -> SMOLAGENTS_API_KEY -> OPENAI_API_KEY
+      - API Base: api_base arg -> CUSTOM_API_BASE -> SMOLAGENTS_API_BASE -> OPENAI_API_BASE
     """
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
+    resolved_api_key = (
+        api_key
+        or os.environ.get("CUSTOM_API_KEY")
+        or os.environ.get("SMOLAGENTS_API_KEY")
+        or os.environ.get("OPENAI_API_KEY")
+    )
+    
+    resolved_api_base = (
+        api_base
+        or os.environ.get("CUSTOM_API_BASE")
+        or os.environ.get("SMOLAGENTS_API_BASE")
+        or os.environ.get("OPENAI_API_BASE")
+    )
+
+    if not resolved_api_key:
         raise EnvironmentError(
-            "OPENAI_API_KEY environment variable is required. "
-            "Set it with: export OPENAI_API_KEY=sk-..."
+            "An API key must be provided either via the config/arguments "
+            "or by setting one of the environment variables: "
+            "CUSTOM_API_KEY, SMOLAGENTS_API_KEY, or OPENAI_API_KEY."
         )
 
     try:
         from smolagents import OpenAIServerModel
-        return OpenAIServerModel(model_id=model_id, api_key=api_key)
+        return OpenAIServerModel(model_id=model_id, api_base=resolved_api_base, api_key=resolved_api_key)
     except (ImportError, TypeError):
         from smolagents import LiteLLMModel
+        # For LiteLLM, if a custom api_base is defined, or model_id has custom provider slash, 
+        # do not prepend "openai/".
+        if resolved_api_base or "/" in model_id:
+            resolved_model_id = model_id
+        else:
+            resolved_model_id = f"openai/{model_id}"
+            
         return LiteLLMModel(
-            model_id=f"openai/{model_id}",
-            api_key=api_key,
+            model_id=resolved_model_id,
+            api_base=resolved_api_base,
+            api_key=resolved_api_key,
         )
 
 
@@ -313,9 +343,14 @@ def _save_run_trace(trace: dict[str, Any], target_label: str) -> str:
     return str(log_path)
 
 
-def create_research_agent(model_id: str, mcp_tools: list | None = None) -> CodeAgent:
+def create_research_agent(
+    model_id: str,
+    mcp_tools: list | None = None,
+    api_base: str | None = None,
+    api_key: str | None = None,
+) -> CodeAgent:
     """Instantiate the research agent with database and web tools."""
-    model = _create_model(model_id)
+    model = _create_model(model_id, api_base=api_base, api_key=api_key)
     agent_tools = [search_sabdab, query_iedb, web_search, visit_webpage]
     if mcp_tools:
         agent_tools.extend(mcp_tools)
@@ -324,7 +359,7 @@ def create_research_agent(model_id: str, mcp_tools: list | None = None) -> CodeA
         name="research_agent",
         tools=agent_tools,
         model=model,
-        planning_interval=4,
+        planning_interval=1,
         max_steps=8,
         additional_authorized_imports=["json", "textwrap", "os", "sys", "subprocess", "requests"],
         executor_kwargs={"timeout_seconds": 300},
@@ -332,9 +367,13 @@ def create_research_agent(model_id: str, mcp_tools: list | None = None) -> CodeA
     )
 
 
-def create_reasoning_agent(model_id: str) -> CodeAgent:
+def create_reasoning_agent(
+    model_id: str,
+    api_base: str | None = None,
+    api_key: str | None = None,
+) -> CodeAgent:
     """Instantiate the reasoning agent that designs a candidate from inputs."""
-    model = _create_model(model_id)
+    model = _create_model(model_id, api_base=api_base, api_key=api_key)
     return CodeAgent(
         name="reasoning_agent",
         tools=[fasta_to_smiles, check_lipinski, passes_pains_filter, pipeline_filter],
@@ -388,11 +427,22 @@ def run_agent(config: AgentConfig) -> str:
     server_parameters = StdioServerParameters(command="biomcp", args=["mcp"])
     
     with MCPClient(server_parameters) as mcp_tools:
-        research_agent = create_research_agent(research_model_id, mcp_tools)
-        reasoning_agent = create_reasoning_agent(reasoning_model_id)
+        research_agent = create_research_agent(
+            research_model_id,
+            mcp_tools,
+            api_base=config.api_base,
+            api_key=config.api_key,
+        )
+        reasoning_agent = create_reasoning_agent(
+            reasoning_model_id,
+            api_base=config.api_base,
+            api_key=config.api_key,
+        )
 
         print(f"[agent] Starting protein candidate design for '{target_name}'...")
         print(f"[agent] Research model:  {research_model_id}")
+        if config.api_base:
+            print(f"[agent] API Base:        {config.api_base}")
         print(f"[agent] Reasoning model: {reasoning_model_id}")
         print(f"[agent] Identity threshold: {config.identity_threshold:.0%}")
         print()
