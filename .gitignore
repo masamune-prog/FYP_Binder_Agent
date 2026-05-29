@@ -1,2 +1,4 @@
 core/__pycache
 test/__pycache
+databases/proteinbase_cleaned_unpacked.csv
+.venv
