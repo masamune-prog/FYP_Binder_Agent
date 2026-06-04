@@ -1,0 +1,6 @@
+2026-06-04 08:49:45,455 WARNING: no GPU detected, will be using CPU
+2026-06-04 08:49:46,419 Found 6 citations for tools or databases
+2026-06-04 08:49:46,419 Query 1/1: candidate_target_complex (length 856)
+2026-06-04 08:49:46,420 No user agent specified. Please set a user agent (e.g., 'toolname/version contact@email') to help us debug in case of problems. This warning will become an error in the future.
+2026-06-04 08:49:48,705 No user agent specified. Please set a user agent (e.g., 'toolname/version contact@email') to help us debug in case of problems. This warning will become an error in the future.
+2026-06-04 08:49:50,530 Setting max_seq=508, max_extra_seq=1611

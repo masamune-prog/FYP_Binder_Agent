@@ -1,0 +1,9 @@
+2026-06-04 08:39:49,448 WARNING: no GPU detected, will be using CPU
+2026-06-04 08:39:52,469 generated new fontManager
+2026-06-04 08:39:52,890 Found 6 citations for tools or databases
+2026-06-04 08:39:52,890 Query 1/1: candidate_target_complex (length 20)
+2026-06-04 08:39:52,896 No user agent specified. Please set a user agent (e.g., 'toolname/version contact@email') to help us debug in case of problems. This warning will become an error in the future.
+2026-06-04 08:39:53,936 Sleeping for 6s. Reason: PENDING
+2026-06-04 08:40:01,130 No user agent specified. Please set a user agent (e.g., 'toolname/version contact@email') to help us debug in case of problems. This warning will become an error in the future.
+2026-06-04 08:40:01,718 Sleeping for 9s. Reason: PENDING
+2026-06-04 08:40:11,313 Sleeping for 9s. Reason: PENDING

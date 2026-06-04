@@ -149,7 +149,7 @@ def main():
     _banner("Filter 4: AF2-IG (ColabFold Multimer iPTM)")
     try:
         result = run_af2ig_filter(CANDIDATE_FASTA, TARGET_FASTA)
-    except FileNotFoundError as exc:
+    except (FileNotFoundError, Exception) as exc:
         result = FilterResult(
             filter_name="AF2-IG", passed=False, iptm=0.0,
             threshold=0.6, error=str(exc),
@@ -178,7 +178,7 @@ def main():
     _banner("Filter 6: Protenix (iPTM)")
     try:
         result = run_protenix_filter(CANDIDATE_FASTA, TARGET_FASTA)
-    except FileNotFoundError as exc:
+    except (FileNotFoundError, Exception) as exc:
         result = FilterResult(
             filter_name="Protenix", passed=False, iptm=0.0,
             threshold=0.7, error=str(exc),

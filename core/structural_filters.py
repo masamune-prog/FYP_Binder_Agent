@@ -248,6 +248,31 @@ def run_af2ig_filter(
             ),
         )
 
+    # Check if model parameters are present (do not download)
+    try:
+        from colabfold.download import default_data_dir
+
+        params_dir = default_data_dir / "params"
+        required_param = params_dir / "params_model_3_multimer_v3.npz"
+        if not required_param.exists():
+            return FilterResult(
+                filter_name="AF2-IG",
+                passed=False,
+                iptm=0.0,
+                threshold=iptm_threshold,
+                output_dir=str(output_dir),
+                error="AlphaFold2 multimer weights not found. Weight download is disabled.",
+            )
+    except Exception as exc:
+        return FilterResult(
+            filter_name="AF2-IG",
+            passed=False,
+            iptm=0.0,
+            threshold=iptm_threshold,
+            output_dir=str(output_dir),
+            error=f"Error checking AlphaFold2 parameters: {exc}",
+        )
+
     try:
         setup_logging(output_dir / "log.txt")
         queries, is_complex = get_queries(str(input_dir))
@@ -411,8 +436,8 @@ def run_protenix_filter(
         result = subprocess.run(
             [
                 protenix_bin, "predict",
-                "--inputs", str(input_json),
-                "--output", str(output_dir),
+                "--input", str(input_json),
+                "--out_dir", str(output_dir),
                 "--seeds", seeds,
             ],
             capture_output=True,
@@ -750,7 +775,10 @@ def run_rosetta_sasa_filter(
 
         # Set up InterfaceAnalyzerMover
         # By default, chain 1 is 'A', chain 2 is 'B'
-        ia = InterfaceAnalyzerMover("A_B")
+        try:
+            ia = InterfaceAnalyzerMover("A_B")
+        except Exception:
+            ia = InterfaceAnalyzerMover()
         ia.set_pack_separated(True)
         ia.set_pack_input(True)
         ia.apply(pose_binder)
