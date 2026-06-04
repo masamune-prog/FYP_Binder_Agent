@@ -750,8 +750,7 @@ def run_rosetta_sasa_filter(
 
         # Set up InterfaceAnalyzerMover
         # By default, chain 1 is 'A', chain 2 is 'B'
-        ia = InterfaceAnalyzerMover()
-        ia.set_fixedchains("A")
+        ia = InterfaceAnalyzerMover("A_B")
         ia.set_pack_separated(True)
         ia.set_pack_input(True)
         ia.apply(pose_binder)

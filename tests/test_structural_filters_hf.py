@@ -202,6 +202,7 @@ def main():
     # Return non-zero if any filter failed (ignoring dependency errors)
     real_failures = [
         r for r in all_results
+        if not r.passed and not r.error
     ]
     return 1 if real_failures else 0
 
