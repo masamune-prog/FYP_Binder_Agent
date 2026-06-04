@@ -22,6 +22,10 @@
 # This file must be used with "source bin/activate" *from bash*
 # you cannot run it directly
 
+if ! [ -z "${SCRIPT_PATH+_}" ] ; then
+    _OLD_SCRIPT_PATH="$SCRIPT_PATH"
+fi
+
 # Get script path (only used if environment is relocatable).
 if [ -n "${BASH_VERSION:+x}" ] ; then
     SCRIPT_PATH="${BASH_SOURCE[0]}"
@@ -74,20 +78,30 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV='/home/masamuneprog/FYP/.venv'
+VIRTUAL_ENV='/workspace/FYP_Binder_Agent/.venv'
 if ([ "$OSTYPE" = "cygwin" ] || [ "$OSTYPE" = "msys" ]) && $(command -v cygpath &> /dev/null) ; then
     VIRTUAL_ENV=$(cygpath -u "$VIRTUAL_ENV")
 fi
 export VIRTUAL_ENV
 
+# Unset the `SCRIPT_PATH` variable, now that the `VIRTUAL_ENV` variable
+# has been set. This is important for relocatable environments.
+if ! [ -z "${_OLD_SCRIPT_PATH+_}" ] ; then
+    SCRIPT_PATH="$_OLD_SCRIPT_PATH"
+    export SCRIPT_PATH
+    unset _OLD_SCRIPT_PATH
+else
+    unset SCRIPT_PATH
+fi
+
 _OLD_VIRTUAL_PATH="$PATH"
 PATH="$VIRTUAL_ENV/bin:$PATH"
 export PATH
 
-if [ "xFYP" != x ] ; then
-    VIRTUAL_ENV_PROMPT="(FYP) "
+if [ "xFYP_Binder_Agent" != x ] ; then
+    VIRTUAL_ENV_PROMPT="FYP_Binder_Agent"
 else
-    VIRTUAL_ENV_PROMPT="($(basename "$VIRTUAL_ENV")) "
+    VIRTUAL_ENV_PROMPT=$(basename "$VIRTUAL_ENV")
 fi
 export VIRTUAL_ENV_PROMPT
 
@@ -99,7 +113,7 @@ fi
 
 if [ -z "${VIRTUAL_ENV_DISABLE_PROMPT-}" ] ; then
     _OLD_VIRTUAL_PS1="${PS1-}"
-    PS1="${VIRTUAL_ENV_PROMPT}${PS1-}"
+    PS1="(${VIRTUAL_ENV_PROMPT}) ${PS1-}"
     export PS1
 fi
 
@@ -113,4 +127,4 @@ pydoc () {
 # The hash command must be called to get it to forget past
 # commands. Without forgetting past commands the $PATH changes
 # we made may not be respected
-hash -r 2>/dev/null
+hash -r 2>/dev/null || true

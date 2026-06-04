@@ -58,8 +58,8 @@ deactivate -nondestructive
 $VIRTUAL_ENV = $BASE_DIR
 $env:VIRTUAL_ENV = $VIRTUAL_ENV
 
-if ("FYP" -ne "") {
-    $env:VIRTUAL_ENV_PROMPT = "FYP"
+if ("FYP_Binder_Agent" -ne "") {
+    $env:VIRTUAL_ENV_PROMPT = "FYP_Binder_Agent"
 }
 else {
     $env:VIRTUAL_ENV_PROMPT = $( Split-Path $env:VIRTUAL_ENV -Leaf )

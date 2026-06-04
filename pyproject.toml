@@ -9,6 +9,9 @@ dependencies = [
     "biopython",
     "requests",
     "pandas",
+    "rdkit",
+    "transformers",
+    "torch",
 ]
 
 [project.optional-dependencies]

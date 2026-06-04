@@ -19,9 +19,16 @@
 @REM OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 @REM WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-@for %%i in ("/home/masamuneprog/FYP/.venv") do @set "VIRTUAL_ENV=%%~fi"
+@REM This file is UTF-8 encoded, so we need to update the current code page while executing it
+@for /f "tokens=2 delims=:." %%a in ('"%SystemRoot%\System32\chcp.com"') do @set _OLD_CODEPAGE=%%a
 
-@set "VIRTUAL_ENV_PROMPT=FYP"
+@if defined _OLD_CODEPAGE (
+    "%SystemRoot%\System32\chcp.com" 65001 > nul
+)
+
+@for %%i in ("/workspace/FYP_Binder_Agent/.venv") do @set "VIRTUAL_ENV=%%~fi"
+
+@set "VIRTUAL_ENV_PROMPT=FYP_Binder_Agent"
 @if NOT DEFINED VIRTUAL_ENV_PROMPT (
     @for %%d in ("%VIRTUAL_ENV%") do @set "VIRTUAL_ENV_PROMPT=%%~nxd"
 )
@@ -57,3 +64,8 @@
 :ENDIFVPATH2
 
 @set "PATH=%VIRTUAL_ENV%\bin;%PATH%"
+
+@if defined _OLD_CODEPAGE (
+    "%SystemRoot%\System32\chcp.com" %_OLD_CODEPAGE% > nul
+    @set _OLD_CODEPAGE=
+)

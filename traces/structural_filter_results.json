@@ -1,0 +1,77 @@
+[
+  {
+    "filter_name": "Chemical (RDKit)",
+    "passed": true,
+    "iptm": 1.0,
+    "ptm": null,
+    "plddt": null,
+    "threshold": 1.0,
+    "output_dir": "",
+    "raw_scores": {
+      "is_peptide": true,
+      "pains_pass": true,
+      "lipinski_pass": true,
+      "skipped_lipinski": true
+    },
+    "error": null
+  },
+  {
+    "filter_name": "ESM2 LL",
+    "passed": false,
+    "iptm": -2.3064342463374374,
+    "ptm": null,
+    "plddt": null,
+    "threshold": -2.0,
+    "output_dir": "",
+    "raw_scores": {
+      "mean_log_likelihood": -2.3064342463374374,
+      "model_name": "facebook/esm2_t6_8M_UR50D",
+      "sequence_length": 254
+    },
+    "error": null
+  },
+  {
+    "filter_name": "Rosetta dSASA",
+    "passed": false,
+    "iptm": 0.0,
+    "ptm": null,
+    "plddt": null,
+    "threshold": 500.0,
+    "output_dir": "",
+    "raw_scores": {},
+    "error": "PyRosetta is not installed: No module named 'pyrosetta'"
+  },
+  {
+    "filter_name": "AF2-IG",
+    "passed": false,
+    "iptm": 0.0,
+    "ptm": null,
+    "plddt": null,
+    "threshold": 0.6,
+    "output_dir": "/workspace/FYP_Binder_Agent/traces/structural/20260604_045044/af2ig",
+    "raw_scores": {},
+    "error": "ColabFold Python API import failed. Install ColabFold in this environment. Details: No module named 'colabfold'"
+  },
+  {
+    "filter_name": "AF2-PAE",
+    "passed": false,
+    "iptm": 0.0,
+    "ptm": null,
+    "plddt": null,
+    "threshold": 0.6,
+    "output_dir": "",
+    "raw_scores": {},
+    "error": "No score JSON files found in /workspace/FYP_Binder_Agent/traces/structural/20260604_045044/af2ig"
+  },
+  {
+    "filter_name": "Protenix",
+    "passed": false,
+    "iptm": 0.0,
+    "ptm": null,
+    "plddt": null,
+    "threshold": 0.7,
+    "output_dir": "",
+    "raw_scores": {},
+    "error": "'protenix' not found on PATH. Install it with: pip install -e '.[structural]'"
+  }
+]
