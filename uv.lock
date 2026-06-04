@@ -742,6 +742,15 @@ wheels = [
 ]
 
 [[package]]
+name = "fair-esm"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/fc/fb/61ddfd2f058c298491d500b606808aab6729944da844fbe63cb7be405a9a/fair-esm-2.0.0.tar.gz", hash = "sha256:4ed34d4598ec75ed6550a4e581d023bf8d4a8375317ecba6269bb68135f80c85", size = 84217 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/79/26/1cc82571f507b9dae3b36d4242764edc6e4ae9f3f81f44a6382c15fad565/fair_esm-2.0.0-py3-none-any.whl", hash = "sha256:7dcb58828a401155d1457d071a03800bd1a50331ddf24ac79ad1dd0f2ea682a2", size = 93125 },
+]
+
+[[package]]
 name = "fastuuid"
 version = "0.14.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2714,6 +2723,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+esm = [
+    { name = "fair-esm" },
+]
 structural = [
     { name = "colabfold", extra = ["alphafold"] },
     { name = "protenix" },
@@ -2723,13 +2735,14 @@ structural = [
 requires-dist = [
     { name = "biopython" },
     { name = "colabfold", extras = ["alphafold"], marker = "extra == 'structural'" },
+    { name = "fair-esm", marker = "extra == 'esm'" },
     { name = "litellm" },
     { name = "pandas" },
     { name = "protenix", marker = "extra == 'structural'" },
     { name = "requests" },
     { name = "smolagents", specifier = ">=1.0.0" },
 ]
-provides-extras = ["structural"]
+provides-extras = ["structural", "esm", "rosetta"]
 
 [[package]]
 name = "protenix"

@@ -16,6 +16,15 @@ structural = [
     "colabfold[alphafold]",
     "protenix",
 ]
+# ESM2 expression metric filter (Hugging Face transformers)
+esm = [
+    "transformers",
+    "torch",
+]
+# Rosetta ΔSASA docking filter (requires free academic licence)
+# Install manually: pip install pyrosetta-installer &&
+#   python -c "import pyrosetta_installer; pyrosetta_installer.install_pyrosetta()"
+rosetta = []
 
 [project.scripts]
 protein-agent = "main:main"
