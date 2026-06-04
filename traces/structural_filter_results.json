@@ -48,20 +48,26 @@
     "ptm": null,
     "plddt": null,
     "threshold": 0.6,
-    "output_dir": "/workspace/FYP_Binder_Agent/traces/structural/20260604_045044/af2ig",
+    "output_dir": "/workspace/FYP_Binder_Agent/traces/structural/20260604_085709/af2ig",
     "raw_scores": {},
-    "error": "ColabFold Python API import failed. Install ColabFold in this environment. Details: No module named 'colabfold'"
+    "error": "ColabFold run failed: No module named 'pdbfixer'"
   },
   {
     "filter_name": "AF2-PAE",
     "passed": false,
-    "iptm": 0.0,
+    "iptm": 0.34,
     "ptm": null,
     "plddt": null,
     "threshold": 0.6,
-    "output_dir": "",
-    "raw_scores": {},
-    "error": "No score JSON files found in /workspace/FYP_Binder_Agent/traces/structural/20260604_045044/af2ig"
+    "output_dir": "/workspace/FYP_Binder_Agent/traces/structural/20260604_085709/af2ig",
+    "raw_scores": {
+      "iptm": 0.34,
+      "mean_interchain_pae": 23.99343481047427,
+      "min_interchain_pae": 8.84,
+      "pae_threshold": 10.0,
+      "iptm_threshold": 0.6
+    },
+    "error": null
   },
   {
     "filter_name": "Protenix",

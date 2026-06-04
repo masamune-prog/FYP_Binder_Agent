@@ -4,3 +4,9 @@
 2026-06-04 08:49:46,420 No user agent specified. Please set a user agent (e.g., 'toolname/version contact@email') to help us debug in case of problems. This warning will become an error in the future.
 2026-06-04 08:49:48,705 No user agent specified. Please set a user agent (e.g., 'toolname/version contact@email') to help us debug in case of problems. This warning will become an error in the future.
 2026-06-04 08:49:50,530 Setting max_seq=508, max_extra_seq=1611
+2026-06-04 09:41:30,868 alphafold2_multimer_v3_model_1_seed_000 recycle=0 pLDDT=67 pTM=0.546 ipTM=0.274
+2026-06-04 10:33:14,656 alphafold2_multimer_v3_model_1_seed_000 recycle=1 pLDDT=71.1 pTM=0.562 ipTM=0.26 tol=7.52
+2026-06-04 11:24:41,456 alphafold2_multimer_v3_model_1_seed_000 recycle=2 pLDDT=71.9 pTM=0.576 ipTM=0.311 tol=2.76
+2026-06-04 12:16:12,214 alphafold2_multimer_v3_model_1_seed_000 recycle=3 pLDDT=72.8 pTM=0.588 ipTM=0.345 tol=2.37
+2026-06-04 12:16:12,215 alphafold2_multimer_v3_model_1_seed_000 took 12380.3s (3 recycles)
+2026-06-04 12:16:12,266 reranking models by 'multimer' metric
